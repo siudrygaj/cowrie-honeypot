@@ -55,8 +55,8 @@ Flask dashboard (gunicorn) → honeypot.jakobsiudryga.dev
 
 > Dashboard auto-refreshes every 10 minutes via JavaScript polling.
 
-<img width="1470" height="878" alt="Screenshot 2026-08-21 at 6 28 55 PM" src="https://github.com/user-attachments/assets/cfcaaf3d-a1d3-4062-ba81-cc2116d4458f" />
-<img width="1470" height="659" alt="Screenshot 2026-08-21 at 6 31 53 PM" src="https://github.com/user-attachments/assets/d553ed6b-e1f3-4e4b-a277-7be20428f51d" />
+![Dashboard Overview](dashboard-overview1.png)
+![Dashboard Overview - continued](dashboard-overview2.png)
 
 ---
 
@@ -123,7 +123,7 @@ gpu_info=$(lspci | grep -i vga; lspci | grep -i nvidia ...)
 
 > **Why this matters:** This isn't random scanning — it's automated pre-payload reconnaissance answering three specific questions before committing: *Is this a real machine or a trap? Is it powerful enough to mine crypto? Does it already hold credentials worth stealing?* The fallback chains (`|| /bin/uname || busybox uname || grep /proc/cpuinfo`) show the attacker is hardening their script against non-standard environments — a level of operational maturity consistent with organized botnet infrastructure, not opportunistic script kiddies.
 
-<img width="728" height="432" alt="Screenshot 2026-08-21 at 6 35 31 PM" src="https://github.com/user-attachments/assets/8abaeb5b-f567-461b-a311-fdce86478e7b" />
+![Post-Login Commands](post-login-commands.png)
 
 ---
 
