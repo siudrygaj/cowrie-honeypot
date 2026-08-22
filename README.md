@@ -27,7 +27,7 @@ A medium-interaction SSH honeypot deployed on an isolated Proxmox VM. Capturing 
 | Unique Source IPs | 834 |
 | Unique Credential Pairs | 10,561 |
 | Countries | 10+ |
-| Collection Period | 14 days |
+| Collection Period | 15 days |
 | Status | Complete |
 
 ---
@@ -90,7 +90,7 @@ honeypot.jakobsiudryga.dev
 | T1497.001 | Virtualization/Sandbox Evasion | Defense Evasion | `echo xsec` — known honeypot detection string, 8,334 times |
 | T1036.003 | Masquerading: Rename Utility | Defense Evasion | `/bin/./uname` path obfuscation to evade string-based detection |
 | T1592 | Gather Victim Host Information | Reconnaissance | Systematic OS/kernel/CPU/GPU profiling before payload deployment |
-| T1005 | Data from Local System | Collection | Hunting for Telegram session files, SMS-modem hardware, and miner processes |
+| T1005 | Data from Local System | Collection | Hunting for Telegram session files and SMS-modem hardware |
 | T1057 | Process Discovery | Discovery | `ps aux \| grep '[Mm]iner'` — actively scanning for existing cryptomining processes |
 
 ---
@@ -135,12 +135,27 @@ gpu_info=$(lspci | grep -i vga; lspci | grep -i nvidia ...)
 
 ---
 
+## 🕸️ Key Finding: Distributed Scanning Fleet (TechTies Inc)
+
+15,197 sessions attributed to TechTies Inc weren't from one host — they came from **40 distinct IPs**, confirmed via WHOIS (`org-name: TechTies Inc.`, maintainer `techties-mnt`).
+
+| Tier | IPs | Sessions each |
+|---|---|---|
+| Lead node (`91.92.42.52`) | 1 | 1,445 |
+| Main fleet | 14 | 772–773 |
+| Secondary tier | 4 | 501–605 |
+| Noise / probes | ~21 | 1–4 |
+
+Fourteen IPs landing within a single session of each other isn't opportunistic — it's a signature of centrally-orchestrated task distribution. The lead node's first session was **Aug 18, 2026 (day 12 of 15)** — this was a late, sustained operation, not one of the first attacks.
+
+---
+
 ## 🕵️ Key Findings
 
 - **65% residential IPs, 35% cloud/hosting** — showing a mix of compromised home routers and VPS-based botnets
-- **Aug 16 spike — 9,000+ attempts in a single day** — consistent with a concentrated botnet wave, most likely TechTies ASN cycling through targets
-- **TechTies Inc (Netherlands)** — 15,197 sessions from one ASN, consistent with a Mirai-variant botnet (was one of the first major attacks on the honeypot)
-- **Primenet Global Ltd. (India)** — 15,284 sessions, the single largest attacking ASN observed
+- **Aug 16 spike — ~9,498 login attempts in a single day**, concentrated almost entirely in a 12-hour window. Traced to two specific IPs — 110.173.190.221 (Primenet Global Ltd., India) and 64.235.58.29 (a Dallas, TX datacenter) — which together make up ~90% of that day's entire session volume
+- **TechTies Inc (Netherlands/Germany)** — 15,197 sessions across 40 distinct IPs, confirmed via WHOIS. Not one host — a fleet: 14 IPs each logged 772–773 sessions, within a single session of each other, a signature of centrally-orchestrated task distribution. This was a late-stage operation, not an early one — the lead node's first session was Aug 18, day 12 of the 15-day collection window
+- **Primenet Global Ltd. (India)** — 15,284 sessions, the single largest org by volume, but confirmed to come entirely from one IP (110.173.190.221) in a single-day burst on Aug 16 — not sustained activity. A sharp contrast to TechTies Inc, whose comparable session count was spread across a coordinated 40-IP fleet over multiple days
 - **University of Education, Winneba (Ghana)** — 1,143 sessions from an academic network, indicating probably compromised institutional infrastructure
 - **`echo xsec` appeared 8,334 times** — attackers actively probing for honeypot environments before deploying payloads
 - **`uname` executed 19,523 times** — automated OS fingerprinting at scale across the full session window
