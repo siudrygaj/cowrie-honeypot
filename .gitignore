@@ -1,0 +1,7 @@
+*.db
+*.json
+*.log
+__pycache__/
+*.pyc
+.env
+cowrie-logs/

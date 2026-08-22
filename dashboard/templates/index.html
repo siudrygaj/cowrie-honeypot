@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.S · cowrie_honeypot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #06101f;
+    --panel: #0b1a2e;
+    --line: #1a3050;
+    --amber: #38bdf8;
+    --green: #4ADE80;
+    --red: #F0505A;
+    --text: #cce4f6;
+    --dim: #4a7fa5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.5; }
+  .topbar { border-bottom: 1px solid var(--line); padding: 14px 22px; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+  .brand { font-weight: 800; font-size: 14px; letter-spacing: 0.5px; }
+  .brand span { color: var(--amber); }
+  .meta { color: var(--dim); font-size: 11px; }
+  .meta .ok { color: var(--green); }
+  main { padding: 18px 22px 40px; }
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); margin-bottom: 18px; }
+  .stat { padding: 12px 16px; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: none; }
+  .stat-label { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .stat-value { font-size: 24px; font-weight: 700; }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.green { color: var(--green); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); border-bottom: none; }
+  .panel { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 14px 16px 18px; }
+  .panel:nth-child(even) { border-right: none; }
+  .panel-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+  .panel-idx { color: var(--amber); font-weight: 700; }
+  .panel-title { font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+  .panel-sub { color: var(--dim); font-size: 11px; margin-bottom: 12px; }
+  canvas { max-height: 210px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; color: var(--dim); font-weight: 500; padding-bottom: 6px; border-bottom: 1px solid var(--line); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 6px 0; border-bottom: 1px solid #171A1E; }
+  tr:last-child td { border-bottom: none; }
+  .c-amber { color: var(--amber); }
+  .c-red { color: var(--red); }
+  .c-dim { color: var(--dim); }
+  .num { text-align: right; }
+  .cmd-cell { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .infra-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 11px; }
+  .infra-bar-track { flex: 1; height: 6px; background: #171A1E; position: relative; }
+  .infra-bar-fill { height: 100%; background: var(--amber); }
+  .infra-bar-fill.res { background: var(--dim); }
+  footer { padding: 16px 22px 30px; color: var(--dim); font-size: 11px; border-top: 1px solid var(--line); }
+  @media (max-width: 900px) {
+    .stat-row { grid-template-columns: 1fr 1fr; }
+    .grid { grid-template-columns: 1fr; }
+    .panel:nth-child(even) { border-right: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span>J.S</span> cowrie_honeypot</div>
+  <div class="meta"><span style="color:#e05c5c">●</span> closed &nbsp;·&nbsp; ssh honeypot, port 22 to 2222 &nbsp;·&nbsp; isolated homelab VM &nbsp;·&nbsp; data collection closed · Aug 7 – Aug 21, 2026 · 46,347 sessions captured</div>
+</div>
+
+<main>
+
+  <div class="stat-row" style="grid-template-columns: repeat(5, 1fr);">
+    <div class="stat"><div class="stat-label">total_sessions</div><div class="stat-value" id="stat-sessions">--</div></div>
+    <div class="stat"><div class="stat-label">login_attempts</div><div class="stat-value amber" id="stat-attempts">--</div></div>
+    <div class="stat"><div class="stat-label">successful_logins</div><div class="stat-value red" id="stat-success">--</div></div>
+    <div class="stat"><div class="stat-label">unique_source_ips</div><div class="stat-value green" id="stat-ips">--</div></div>
+    <div class="stat"><div class="stat-label">unique_cred_pairs</div><div class="stat-value amber" id="stat-cred-pairs">--</div></div>
+  </div>
+
+  <div class="grid">
+
+    <div class="panel">
+      <div class="panel-head"><span class="panel-idx">01</span><span class="panel-title">Attempts Over Time</span></div>
+      <div class="panel-sub">login attempts grouped by day</div>
+      <canvas id="chart-time"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><span class="panel-idx">02</span><span class="panel-title">Top Source IPs</span></div>
+      <div class="panel-sub">by session count</div>
+      <canvas id="chart-ips"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><span class="panel-idx">03</span><span class="panel-title">Top Credential Pairs</span></div>
+      <div class="panel-sub">username / password combos attempted most</div>
+      <table id="table-creds"><thead><tr><th>user</th><th>pass</th><th class="num">count</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><span class="panel-idx">04</span><span class="panel-title">Post-Login Commands</span></div>
+      <div class="panel-sub">what attackers ran after fake access</div>
+      <table id="table-commands"><thead><tr><th>command</th><th class="num">count</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><span class="panel-idx">05</span><span class="panel-title">Top Countries</span></div>
+      <div class="panel-sub">by session origin (geo lookup via ip-api.com)</div>
+      <table id="table-countries"><thead><tr><th>country</th><th class="num">sessions</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><span class="panel-idx">06</span><span class="panel-title">Attacker Infrastructure</span></div>
+      <div class="panel-sub">cloud/hosting IPs vs residential ISPs</div>
+      <div id="infra-split"></div>
+      <table id="table-orgs" style="margin-top:12px"><thead><tr><th>org / isp</th><th class="num">sessions</th></tr></thead><tbody></tbody></table>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  cowrie · docker · flask · sqlite · gunicorn · cloudflare tunnel · ip-api.com &nbsp;·&nbsp; jakobsiudryga.dev · project closed Aug 21, 2026
+</footer>
+
+<script>
+  Chart.defaults.color = '#4a7fa5';
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  Chart.defaults.font.size = 10;
+
+  async function loadSummary() {
+    const res = await fetch('/api/summary');
+    const data = await res.json();
+    document.getElementById('stat-sessions').textContent = data.total_sessions;
+    document.getElementById('stat-attempts').textContent = data.total_attempts;
+    document.getElementById('stat-success').textContent = data.total_success;
+    document.getElementById('stat-ips').textContent = data.unique_ips;
+    document.getElementById('stat-cred-pairs').textContent = data.unique_credential_pairs;
+  }
+
+  async function loadTimeChart() {
+    const res = await fetch('/api/attempts_over_time');
+    const data = await res.json();
+    new Chart(document.getElementById('chart-time'), {
+      type: 'line',
+      data: { labels: data.map(d => d.day), datasets: [{ data: data.map(d => d.attempts), borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.08)', fill: true, tension: 0.15, pointRadius: 2, pointBackgroundColor: '#38bdf8', borderWidth: 1.5 }] },
+      options: { plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#171A1E' } }, y: { grid: { color: '#171A1E' }, beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+  }
+
+  async function loadIpChart() {
+    const res = await fetch('/api/top_ips');
+    const data = await res.json();
+    new Chart(document.getElementById('chart-ips'), {
+      type: 'bar',
+      data: { labels: data.map(d => d.ip), datasets: [{ data: data.map(d => d.count), backgroundColor: '#4ADE80', maxBarThickness: 14 }] },
+      options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#171A1E' }, beginAtZero: true, ticks: { precision: 0 } }, y: { grid: { display: false } } } }
+    });
+  }
+
+  async function loadCredsTable() {
+    const res = await fetch('/api/top_credentials');
+    const data = await res.json();
+    document.querySelector('#table-creds tbody').innerHTML = data.map(d => '<tr><td class="c-amber">' + (d.username ?? '') + '</td><td class="c-red">' + (d.password ?? '') + '</td><td class="num">' + d.count + '</td></tr>').join('');
+  }
+
+  async function loadCommandsTable() {
+    const res = await fetch('/api/top_commands');
+    const data = await res.json();
+    document.querySelector('#table-commands tbody').innerHTML = data.map(d => '<tr><td class="cmd-cell" title="' + (d.command ?? '') + '">' + (d.command ?? '') + '</td><td class="num">' + d.count + '</td></tr>').join('');
+  }
+
+  async function loadCountries() {
+    const res = await fetch('/api/top_countries');
+    const data = await res.json();
+    const tbody = document.querySelector('#table-countries tbody');
+    if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="2" class="c-dim">no geo data yet - run enrich_geo.py</td></tr>'; return; }
+    tbody.innerHTML = data.map(d => '<tr><td>' + (d.country ?? 'unknown') + '</td><td class="num">' + d.count + '</td></tr>').join('');
+  }
+
+  async function loadInfra() {
+    const res = await fetch('/api/attacker_infra');
+    const data = await res.json();
+    const total = data.hosting_count + data.residential_count;
+    const split = document.getElementById('infra-split');
+    if (total === 0) { split.innerHTML = '<div class="c-dim">no geo data yet - run enrich_geo.py</div>'; return; }
+    const hostPct = Math.round((data.hosting_count / total) * 100);
+    const resPct = 100 - hostPct;
+    split.innerHTML = '<div class="infra-bar-row"><span style="width:110px" class="c-amber">cloud/hosting</span><div class="infra-bar-track"><div class="infra-bar-fill" style="width:' + hostPct + '%"></div></div><span style="width:60px;text-align:right">' + data.hosting_count + ' (' + hostPct + '%)</span></div><div class="infra-bar-row"><span style="width:110px" class="c-dim">residential</span><div class="infra-bar-track"><div class="infra-bar-fill res" style="width:' + resPct + '%"></div></div><span style="width:60px;text-align:right">' + data.residential_count + ' (' + resPct + '%)</span></div>';
+    document.querySelector('#table-orgs tbody').innerHTML = data.top_orgs.map(d => '<tr><td>' + (d.org ?? d.isp ?? 'unknown') + '</td><td class="num">' + d.count + '</td></tr>').join('');
+  }
+
+  loadSummary();
+  loadTimeChart();
+  loadIpChart();
+  loadCredsTable();
+  loadCommandsTable();
+  loadCountries();
+  loadInfra();
+</script>
+
+
+<script>
+(function() {
+  function updateCountdown() {
+    const now = new Date();
+    const secs = 600 - (now.getMinutes() % 10 * 60 + now.getSeconds());
+    const m = String(Math.floor(secs / 60)).padStart(2, '0');
+    const s = String(secs % 60).padStart(2, '0');
+    const el = document.getElementById('countdown');
+    if (el) el.textContent = m + ':' + s;
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+})();
+</script>
+<script>
+(function() {
+  function updateCountdown() {
+    const now = new Date();
+    const secs = 600 - (now.getMinutes() % 10 * 60 + now.getSeconds());
+    const m = String(Math.floor(secs / 60)).padStart(2, '0');
+    const s = String(secs % 60).padStart(2, '0');
+    const el = document.getElementById('countdown');
+    if (el) el.textContent = m + ':' + s;
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+})();
+</script>
+</body>
